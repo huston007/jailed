@@ -2,48 +2,40 @@ var gulp = require('gulp');
 var concat = require('gulp-concat');
 var del = require('del');
 var uglify = require('gulp-uglify');
+var browserify = require('gulp-browserify');
+var rename = require('gulp-rename');
 
-var scripts = {
-    main: [
-        'node_modules/es6-promise/dist/es6-promise.js',
-        'lib/_frame.js',
-        'lib/_JailedSite.js',
-        'lib/_pluginWebIframe.js',
-        'lib/_pluginWebWorker.js',
-        'lib/_pluginCore.js'
-    ],
-    jailedSite: [
-        'node_modules/es6-promise/dist/es6-promise',
-        'lib/_JailedSite.js'
-    ]
-};
+var DIST_WEB = 'dist/web'
 
 gulp.task('clean', function() {
     return del(['dist']);
 });
 
-gulp.task('scripts-main', function() {
-    return gulp.src(scripts.main)
-        //.pipe(uglify())
-        .pipe(concat('_frame.js'))
-        .pipe(gulp.dest('dist'));
+gulp.task('scripts', function() {
+    // Single entry point to browserify
+    gulp.src('lib/web-index.js')
+        .pipe(browserify({
+            debug : false
+        }))
+        .pipe(rename('_frame.js'))
+        .pipe(gulp.dest(DIST_WEB));
+});
+
+gulp.task('worker', function() {
+    // Single entry point to browserify
+    gulp.src('lib/worker-index.js')
+        .pipe(browserify({
+            debug : false
+        }))
+        .pipe(rename('_worker.js'))
+        .pipe(gulp.dest(DIST_WEB));
 });
 
 gulp.task('frame-html', function () {
     return gulp.src(['lib/_frame.html'])
-        .pipe(gulp.dest('dist'));
+        .pipe(gulp.dest(DIST_WEB));
 });
 
-gulp.task('scripts-jailed-site', function() {
-    return gulp.src(scripts.jailedSite)
-        //.pipe(uglify())
-        .pipe(concat('jailed-site.min.js'))
-        .pipe(gulp.dest('dist'));
-});
+gulp.task('build-web', ['scripts', 'worker', 'frame-html']);
 
-gulp.task('watch', ['default'], function() {
-    gulp.watch(scripts.main, ['scripts-main']);
-});
-
-
-gulp.task('default', ['clean', 'scripts-main', 'frame-html']);
+gulp.task('default', ['build-web']);

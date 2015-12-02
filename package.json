@@ -2,7 +2,7 @@
   "author": "Dmitry Prokashev <heliosframework@gmail.com>",
   "name": "jailed",
   "description": "execute untrusted code with custom permissions",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "keywords": [
     "jailed",
     "isomorphic",
@@ -25,13 +25,17 @@
     "url": "git://github.com/asvd/jailed.git"
   },
   "main": "lib/jailed.js",
-  "dependencies": {
-    "es6-promise": "3.0.2"
+  "scripts": {
+    "build": "gulp"
   },
+  "dependencies": {},
   "devDependencies": {
     "del": "2.1.0",
+    "es6-promise": "3.0.2",
     "gulp": "3.9.0",
+    "gulp-browserify": "0.5.1",
     "gulp-concat": "2.6.0",
+    "gulp-rename": "1.2.2",
     "gulp-uglify": "1.5.1"
   },
   "optionalDependencies": {},
