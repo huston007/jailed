@@ -38,6 +38,11 @@ gulp.task('frame-html', function () {
         .pipe(gulp.dest(DIST_WEB));
 });
 
-gulp.task('build-web', ['scripts', 'worker', 'frame-html']);
+gulp.task('copy-jailed', function () {
+    return gulp.src(['lib/jailed.js'])
+        .pipe(gulp.dest(DIST_WEB));
+});
+
+gulp.task('build-web', ['scripts', 'worker', 'frame-html', 'copy-jailed']);
 
 gulp.task('default', ['build-web']);
