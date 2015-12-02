@@ -25,8 +25,15 @@
     "url": "git://github.com/asvd/jailed.git"
   },
   "main": "lib/jailed.js",
-  "dependencies": {},
-  "devDependencies": {},
+  "dependencies": {
+    "es6-promise": "3.0.2"
+  },
+  "devDependencies": {
+    "del": "2.1.0",
+    "gulp": "3.9.0",
+    "gulp-concat": "2.6.0",
+    "gulp-uglify": "1.5.1"
+  },
   "optionalDependencies": {},
   "engines": {
     "node": "*"
