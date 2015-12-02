@@ -13,7 +13,7 @@ gulp.task('clean', function() {
 
 gulp.task('scripts', function() {
     // Single entry point to browserify
-    gulp.src('lib/web-index.js')
+    gulp.src('lib/_frame.js')
         .pipe(browserify({
             debug : false
         }))
