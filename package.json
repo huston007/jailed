@@ -28,10 +28,11 @@
   "scripts": {
     "build": "gulp"
   },
-  "dependencies": {},
+  "dependencies": {
+    "es6-promise": "3.0.2"
+  },
   "devDependencies": {
     "del": "2.1.0",
-    "es6-promise": "3.0.2",
     "gulp": "3.9.0",
     "gulp-browserify": "0.5.1",
     "gulp-concat": "2.6.0",
