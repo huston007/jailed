@@ -1,3 +1,4 @@
+jailed.init();
 
 // component shortcuts
 var el = {};

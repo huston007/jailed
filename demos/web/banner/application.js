@@ -1,3 +1,4 @@
+jailed.init();
 
 // interface provided to the plugin
 var image = document.getElementById('image');

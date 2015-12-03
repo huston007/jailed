@@ -1,3 +1,4 @@
+jailed.init();
 var isNode = typeof window == 'undefined';
 var currentPath;
 

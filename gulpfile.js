@@ -40,6 +40,10 @@ gulp.task('frame-html', function () {
 
 gulp.task('copy-jailed', function () {
     return gulp.src(['lib/jailed.js'])
+        .pipe(browserify({
+            debug : false,
+            standalone: 'jailed'
+        }))
         .pipe(gulp.dest(DIST_WEB));
 });
 

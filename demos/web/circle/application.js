@@ -1,4 +1,4 @@
-
+jailed.init();
 // animates the circle
 var circle = document.getElementById('circle');
 var X = 0;  // animation parameters
