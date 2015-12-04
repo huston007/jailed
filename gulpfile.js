@@ -17,7 +17,7 @@ gulp.task('scripts', function() {
         .pipe(browserify({
             debug : false
         }))
-        .pipe(uglify())
+        //.pipe(uglify())
         .pipe(rename('_frame.js'))
         .pipe(gulp.dest(DIST_WEB));
 });
@@ -28,7 +28,7 @@ gulp.task('worker', function() {
         .pipe(browserify({
             debug : false
         }))
-        .pipe(uglify())
+        //.pipe(uglify())
         .pipe(rename('_worker.js'))
         .pipe(gulp.dest(DIST_WEB));
 });

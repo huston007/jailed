@@ -1,1 +1,1824 @@
-!function e(t,n,r){function o(s,a){if(!n[s]){if(!t[s]){var c="function"==typeof require&&require;if(!a&&c)return c(s,!0);if(i)return i(s,!0);throw new Error("Cannot find module '"+s+"'")}var u=n[s]={exports:{}};t[s][0].call(u.exports,function(e){var n=t[s][1][e];return o(n?n:e)},u,u.exports,e,t,n,r)}return n[s].exports}for(var i="function"==typeof require&&require,s=0;s<r.length;s++)o(r[s]);return o}({1:[function(e,t,n){e("es6-promise"),JailedSite=function(e){this._interface={},this._remote=null,this._remoteUpdateHandler=function(){},this._getInterfaceHandler=function(){},this._interfaceSetAsRemoteHandler=function(){},this._disconnectHandler=function(){},this._store=new r;var t=this;this._connection=e,this._connection.onMessage(function(e){t._processMessage(e)}),this._connection.onDisconnect(function(e){t._disconnectHandler(e)})},JailedSite.prototype.onRemoteUpdate=function(e){this._remoteUpdateHandler=e},JailedSite.prototype.onInterfaceSetAsRemote=function(e){this._interfaceSetAsRemoteHandler=e},JailedSite.prototype.onGetInterface=function(e){this._getInterfaceHandler=e},JailedSite.prototype.getRemote=function(){return this._remote},JailedSite.prototype.setInterface=function(e){this._interface=e,this._sendInterface()},JailedSite.prototype._sendInterface=function(){var e=[];for(var t in this._interface)this._interface.hasOwnProperty(t)&&e.push(t);this._connection.send({type:"setInterface",api:e})},JailedSite.prototype._processMessage=function(e){switch(e.type){case"method":var t=this._interface[e.name],n=this._unwrap(e.args),r=n.shift(),o=n.shift(),i=t.apply(null,n);i&&(i.then?i.then(r)["catch"](o):r(i));break;case"callback":var t=this._store.fetch(e.id)[e.num],n=this._unwrap(e.args);t.apply(null,n);break;case"setInterface":this._setRemote(e.api);break;case"getInterface":this._sendInterface(),this._getInterfaceHandler();break;case"interfaceSetAsRemote":this._interfaceSetAsRemoteHandler();break;case"disconnect":this._disconnectHandler(),this._connection.disconnect()}},JailedSite.prototype.requestRemote=function(){this._connection.send({type:"getInterface"})},JailedSite.prototype._setRemote=function(e){this._remote={};var t,n;for(t=0;t<e.length;t++)n=e[t],this._remote[n]=this._genRemoteMethod(n);this._remoteUpdateHandler(),this._reportRemoteSet()},JailedSite.prototype._genRemoteMethod=function(e){var t=this,n=function(){var n=Array.prototype.slice.call(arguments);return new Promise(function(r,o){t._connection.send({type:"method",name:e,args:t._wrap([r,o].concat(n))})})};return n},JailedSite.prototype._reportRemoteSet=function(){this._connection.send({type:"interfaceSetAsRemote"})},JailedSite.prototype._wrap=function(e){for(var t=[],n={},r=!1,o=0;o<e.length;o++)"function"==typeof e[o]?(n[o]=e[o],t[o]={type:"callback",num:o},r=!0):t[o]={type:"argument",value:e[o]};var i={args:t};return r&&(i.callbackId=this._store.put(n)),i},JailedSite.prototype._unwrap=function(e){var t,n,r,o=!1,i=function(e){return function(){if(o){var t="A callback from this set has already been executed";throw new Error(t)}o=!0,e.apply(this,arguments)}},s=[];for(t=0;t<e.args.length;t++)n=e.args[t],"argument"==n.type?s.push(n.value):(r=i(this._genRemoteCallback(e.callbackId,t)),s.push(r));return s},JailedSite.prototype._genRemoteCallback=function(e,t){var n=this,r=function(){n._connection.send({type:"callback",id:e,num:t,args:n._wrap(arguments)})};return r},JailedSite.prototype.disconnect=function(){this._connection.send({type:"disconnect"}),this._connection.disconnect()},JailedSite.prototype.onDisconnect=function(e){this._disconnectHandler=e};var r=function(){this._store={},this._indices=[0]};r.prototype._genId=function(){var e;return e=1==this._indices.length?this._indices[0]++:this._indices.shift()},r.prototype._releaseId=function(e){for(var t=0;t<this._indices.length;t++)if(e<this._indices[t]){this._indices.splice(t,0,e);break}for(t=this._indices.length-1;t>=0&&this._indices[t]-1==this._indices[t-1];t--)this._indices.pop()},r.prototype.put=function(e){var t=this._genId();return this._store[t]=e,t},r.prototype.fetch=function(e){var t=this._store[e];return this._store[e]=null,delete this._store[e],this._releaseId(e),t},t.exports=JailedSite},{"es6-promise":5}],2:[function(e,t,n){!function(){var t=e("./_JailedSite"),n=new t(connection);delete t,delete connection,n.onGetInterface(function(){i()}),n.onRemoteUpdate(function(){application.remote=n.getRemote()});var r=!1,o=[],i=function(){if(!r){r=!0;for(var e;e=o.pop();)e()}},s=function(e){var t=typeof e;if("function"!=t){var n="A function may only be subsribed to the event, "+t+" was provided instead";throw new Error(n)}return e};application.whenConnected=function(e){e=s(e),r?e():o.push(e)},application.setInterface=function(e){n.setInterface(e)},application.disconnect=function(e){n.disconnect()}}()},{"./_JailedSite":1}],3:[function(require,module,exports){window.application={},window.connection={},window.addEventListener("message",function(e){var t=e.data.data;switch(t.type){case"import":case"importJailed":importScript(t.url);break;case"execute":execute(t.code);break;case"message":conn._messageHandler(t.data)}});var importScript=function(e){var t=function(){parent.postMessage({type:"importSuccess",url:e},"*")},n=function(){parent.postMessage({type:"importFailure",url:e},"*")},r=null;try{window.loadScript(e,t,n)}catch(o){r=o}if(r)throw r},execute=function(code){try{eval(code)}catch(e){throw parent.postMessage({type:"executeFailure"},"*"),e}parent.postMessage({type:"executeSuccess"},"*")},conn={disconnect:function(){},send:function(e){parent.postMessage({type:"message",data:e},"*")},onMessage:function(e){conn._messageHandler=e},_messageHandler:function(){},onDisconnect:function(){}};window.connection=conn,parent.postMessage({type:"initialized",dedicatedThread:!1},"*")},{}],4:[function(e,t,n){var r=document.getElementsByTagName("script"),o=r[r.length-1],i=o.parentNode,s=o.src.split("?")[0].split("/").slice(0,-1).join("/")+"/",a=function(){var e=[' self.addEventListener("message", function(m){   ','     if (m.data.type == "initImport") {          ',"         importScripts(m.data.url);              ","         self.postMessage({                      ",'             type : "initialized",               ',"             dedicatedThread : true              ","         });                                     ","     }                                           "," });                                             "].join("\n"),t=window.URL.createObjectURL(new Blob([e])),n=new Worker(t);n.postMessage({type:"initImport",url:s+"_worker.js"});var r=setTimeout(function(){n.terminate(),c()},300);n.addEventListener("message",function(e){"initialized"==e.data.type&&clearTimeout(r),parent.postMessage(e.data,"*")}),window.addEventListener("message",function(e){n.postMessage(e.data)})},c=function(){window.loadScript=function(e,n,r){var o=document.createElement("script");o.src=e;var s=function(){o.onload=null,o.onerror=null,o.onreadystatechange=null,o.parentNode.removeChild(o),t=function(){}},a=function(){s(),n()},c=function(){s(),r()};t=c,o.onerror=c,o.onload=a,o.onreadystatechange=function(){var e=o.readyState;("loaded"===e||"complete"===e)&&a()},i.appendChild(o)};var t=function(){};window.addEventListener("error",function(e){t()}),e("./_pluginWebIframe"),e("./_pluginCore")};try{a()}catch(u){c()}},{"./_pluginCore":2,"./_pluginWebIframe":3}],5:[function(e,t,n){(function(n,r){(function(){"use strict";function o(e){return"function"==typeof e||"object"==typeof e&&null!==e}function i(e){return"function"==typeof e}function s(e){return"object"==typeof e&&null!==e}function a(e){z=e}function c(e){K=e}function u(){return function(){n.nextTick(h)}}function f(){return function(){W(h)}}function p(){var e=0,t=new X(h),n=document.createTextNode("");return t.observe(n,{characterData:!0}),function(){n.data=e=++e%2}}function l(){var e=new MessageChannel;return e.port1.onmessage=h,function(){e.port2.postMessage(0)}}function d(){return function(){setTimeout(h,1)}}function h(){for(var e=0;Z>e;e+=2){var t=te[e],n=te[e+1];t(n),te[e]=void 0,te[e+1]=void 0}Z=0}function _(){try{var t=e,n=t("vertx");return W=n.runOnLoop||n.runOnContext,f()}catch(r){return d()}}function m(){}function v(){return new TypeError("You cannot resolve a promise with itself")}function y(){return new TypeError("A promises callback cannot return that same promise.")}function w(e){try{return e.then}catch(t){return ie.error=t,ie}}function g(e,t,n,r){try{e.call(t,n,r)}catch(o){return o}}function b(e,t,n){K(function(e){var r=!1,o=g(n,t,function(n){r||(r=!0,t!==n?A(e,n):k(e,n))},function(t){r||(r=!0,M(e,t))},"Settle: "+(e._label||" unknown promise"));!r&&o&&(r=!0,M(e,o))},e)}function S(e,t){t._state===re?k(e,t._result):t._state===oe?M(e,t._result):J(t,void 0,function(t){A(e,t)},function(t){M(e,t)})}function I(e,t){if(t.constructor===e.constructor)S(e,t);else{var n=w(t);n===ie?M(e,ie.error):void 0===n?k(e,t):i(n)?b(e,t,n):k(e,t)}}function A(e,t){e===t?M(e,v()):o(t)?I(e,t):k(e,t)}function E(e){e._onerror&&e._onerror(e._result),R(e)}function k(e,t){e._state===ne&&(e._result=t,e._state=re,0!==e._subscribers.length&&K(R,e))}function M(e,t){e._state===ne&&(e._state=oe,e._result=t,K(E,e))}function J(e,t,n,r){var o=e._subscribers,i=o.length;e._onerror=null,o[i]=t,o[i+re]=n,o[i+oe]=r,0===i&&e._state&&K(R,e)}function R(e){var t=e._subscribers,n=e._state;if(0!==t.length){for(var r,o,i=e._result,s=0;s<t.length;s+=3)r=t[s],o=t[s+n],r?j(n,r,o,i):o(i);e._subscribers.length=0}}function x(){this.error=null}function H(e,t){try{return e(t)}catch(n){return se.error=n,se}}function j(e,t,n,r){var o,s,a,c,u=i(n);if(u){if(o=H(n,r),o===se?(c=!0,s=o.error,o=null):a=!0,t===o)return void M(t,y())}else o=r,a=!0;t._state!==ne||(u&&a?A(t,o):c?M(t,s):e===re?k(t,o):e===oe&&M(t,o))}function T(e,t){try{t(function(t){A(e,t)},function(t){M(e,t)})}catch(n){M(e,n)}}function C(e,t){var n=this;n._instanceConstructor=e,n.promise=new e(m),n._validateInput(t)?(n._input=t,n.length=t.length,n._remaining=t.length,n._init(),0===n.length?k(n.promise,n._result):(n.length=n.length||0,n._enumerate(),0===n._remaining&&k(n.promise,n._result))):M(n.promise,n._validationError())}function L(e){return new ae(this,e).promise}function P(e){function t(e){A(o,e)}function n(e){M(o,e)}var r=this,o=new r(m);if(!G(e))return M(o,new TypeError("You must pass an array to race.")),o;for(var i=e.length,s=0;o._state===ne&&i>s;s++)J(r.resolve(e[s]),void 0,t,n);return o}function O(e){var t=this;if(e&&"object"==typeof e&&e.constructor===t)return e;var n=new t(m);return A(n,e),n}function U(e){var t=this,n=new t(m);return M(n,e),n}function q(){throw new TypeError("You must pass a resolver function as the first argument to the promise constructor")}function Y(){throw new TypeError("Failed to construct 'Promise': Please use the 'new' operator, this object constructor cannot be called as a function.")}function D(e){this._id=le++,this._state=void 0,this._result=void 0,this._subscribers=[],m!==e&&(i(e)||q(),this instanceof D||Y(),T(this,e))}function F(){var e;if("undefined"!=typeof r)e=r;else if("undefined"!=typeof self)e=self;else try{e=Function("return this")()}catch(t){throw new Error("polyfill failed because global object is unavailable in this environment")}var n=e.Promise;(!n||"[object Promise]"!==Object.prototype.toString.call(n.resolve())||n.cast)&&(e.Promise=de)}var N;N=Array.isArray?Array.isArray:function(e){return"[object Array]"===Object.prototype.toString.call(e)};var W,z,B,G=N,Z=0,K=({}.toString,function(e,t){te[Z]=e,te[Z+1]=t,Z+=2,2===Z&&(z?z(h):B())}),Q="undefined"!=typeof window?window:void 0,V=Q||{},X=V.MutationObserver||V.WebKitMutationObserver,$="undefined"!=typeof n&&"[object process]"==={}.toString.call(n),ee="undefined"!=typeof Uint8ClampedArray&&"undefined"!=typeof importScripts&&"undefined"!=typeof MessageChannel,te=new Array(1e3);B=$?u():X?p():ee?l():void 0===Q&&"function"==typeof e?_():d();var ne=void 0,re=1,oe=2,ie=new x,se=new x;C.prototype._validateInput=function(e){return G(e)},C.prototype._validationError=function(){return new Error("Array Methods must be provided an Array")},C.prototype._init=function(){this._result=new Array(this.length)};var ae=C;C.prototype._enumerate=function(){for(var e=this,t=e.length,n=e.promise,r=e._input,o=0;n._state===ne&&t>o;o++)e._eachEntry(r[o],o)},C.prototype._eachEntry=function(e,t){var n=this,r=n._instanceConstructor;s(e)?e.constructor===r&&e._state!==ne?(e._onerror=null,n._settledAt(e._state,t,e._result)):n._willSettleAt(r.resolve(e),t):(n._remaining--,n._result[t]=e)},C.prototype._settledAt=function(e,t,n){var r=this,o=r.promise;o._state===ne&&(r._remaining--,e===oe?M(o,n):r._result[t]=n),0===r._remaining&&k(o,r._result)},C.prototype._willSettleAt=function(e,t){var n=this;J(e,void 0,function(e){n._settledAt(re,t,e)},function(e){n._settledAt(oe,t,e)})};var ce=L,ue=P,fe=O,pe=U,le=0,de=D;D.all=ce,D.race=ue,D.resolve=fe,D.reject=pe,D._setScheduler=a,D._setAsap=c,D._asap=K,D.prototype={constructor:D,then:function(e,t){var n=this,r=n._state;if(r===re&&!e||r===oe&&!t)return this;var o=new this.constructor(m),i=n._result;if(r){var s=arguments[r-1];K(function(){j(r,o,s,i)})}else J(n,o,e,t);return o},"catch":function(e){return this.then(null,e)}};var he=F,_e={Promise:de,polyfill:he};"function"==typeof define&&define.amd?define(function(){return _e}):"undefined"!=typeof t&&t.exports?t.exports=_e:"undefined"!=typeof this&&(this.ES6Promise=_e),he()}).call(this)}).call(this,e("1YiZ5S"),"undefined"!=typeof self?self:"undefined"!=typeof window?window:{})},{"1YiZ5S":6}],6:[function(e,t,n){function r(){}var o=t.exports={};o.nextTick=function(){var e="undefined"!=typeof window&&window.setImmediate,t="undefined"!=typeof window&&window.postMessage&&window.addEventListener;if(e)return function(e){return window.setImmediate(e)};if(t){var n=[];return window.addEventListener("message",function(e){var t=e.source;if((t===window||null===t)&&"process-tick"===e.data&&(e.stopPropagation(),n.length>0)){var r=n.shift();r()}},!0),function(e){n.push(e),window.postMessage("process-tick","*")}}return function(e){setTimeout(e,0)}}(),o.title="browser",o.browser=!0,o.env={},o.argv=[],o.on=r,o.addListener=r,o.once=r,o.off=r,o.removeListener=r,o.removeAllListeners=r,o.emit=r,o.binding=function(e){throw new Error("process.binding is not supported")},o.cwd=function(){return"/"},o.chdir=function(e){throw new Error("process.chdir is not supported")}},{}]},{},[4]);
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+require('es6-promise');
+
+/**
+ * Contains the JailedSite object used both by the application
+ * site, and by each plugin
+ */
+
+
+/**
+ * JailedSite object represents a single site in the
+ * communication protocol between the application and the plugin
+ *
+ * @param {Object} connection a special object allowing to send
+ * and receive messages from the opposite site (basically it
+ * should only provide send() and onMessage() methods)
+ */
+JailedSite = function (connection) {
+    this._interface = {};
+    this._remote = null;
+    this._remoteUpdateHandler = function () {
+    };
+    this._getInterfaceHandler = function () {
+    };
+    this._interfaceSetAsRemoteHandler = function () {
+    };
+    this._disconnectHandler = function () {
+    };
+    this._store = new ReferenceStore;
+
+    var me = this;
+    this._connection = connection;
+    this._connection.onMessage(
+        function (data) {
+            me._processMessage(data);
+        }
+    );
+
+    this._connection.onDisconnect(
+        function (m) {
+            me._disconnectHandler(m);
+        }
+    );
+}
+
+
+/**
+ * Set a handler to be called when the remote site updates its
+ * interface
+ *
+ * @param {Function} handler
+ */
+JailedSite.prototype.onRemoteUpdate = function (handler) {
+    this._remoteUpdateHandler = handler;
+}
+
+
+/**
+ * Set a handler to be called when received a responce from the
+ * remote site reporting that the previously provided interface
+ * has been succesfully set as remote for that site
+ *
+ * @param {Function} handler
+ */
+JailedSite.prototype.onInterfaceSetAsRemote = function (handler) {
+    this._interfaceSetAsRemoteHandler = handler;
+}
+
+
+/**
+ * Set a handler to be called when the remote site requests to
+ * (re)send the interface. Used to detect an initialzation
+ * completion without sending additional request, since in fact
+ * 'getInterface' request is only sent by application at the last
+ * step of the plugin initialization
+ *
+ * @param {Function} handler
+ */
+JailedSite.prototype.onGetInterface = function (handler) {
+    this._getInterfaceHandler = handler;
+}
+
+
+/**
+ * @returns {Object} set of remote interface methods
+ */
+JailedSite.prototype.getRemote = function () {
+    return this._remote;
+}
+
+
+/**
+ * Sets the interface of this site making it available to the
+ * remote site by sending a message with a set of methods names
+ *
+ * @param {Object} _interface to set
+ */
+JailedSite.prototype.setInterface = function (_interface) {
+    this._interface = _interface;
+    this._sendInterface();
+}
+
+
+/**
+ * Sends the actual interface to the remote site upon it was
+ * updated or by a special request of the remote site
+ */
+JailedSite.prototype._sendInterface = function () {
+    var names = [];
+    for (var name in this._interface) {
+        if (this._interface.hasOwnProperty(name)) {
+            names.push(name);
+        }
+    }
+
+    this._connection.send({type: 'setInterface', api: names});
+}
+
+
+/**
+ * Handles a message from the remote site
+ */
+JailedSite.prototype._processMessage = function (data) {
+    switch (data.type) {
+        case 'method':
+            var method = this._interface[data.name];
+            var args = this._unwrap(data.args);
+            var resolveCallback = args.shift();
+            var rejectCallback = args.shift();
+            var result = method.apply(null, args);
+
+            //Handle returns
+            if (result) {
+                //Handle promise interface
+                if (result.then) {
+                    result
+                        .then(resolveCallback)
+                        .catch(rejectCallback);
+                } else {
+                    //Handle value return
+                    resolveCallback(result);
+                }
+            }
+            break;
+        case 'callback':
+            var method = this._store.fetch(data.id)[data.num];
+            var args = this._unwrap(data.args);
+            method.apply(null, args);
+            break;
+        case 'setInterface':
+            this._setRemote(data.api);
+            break;
+        case 'getInterface':
+            this._sendInterface();
+            this._getInterfaceHandler();
+            break;
+        case 'interfaceSetAsRemote':
+            this._interfaceSetAsRemoteHandler();
+            break;
+        case 'disconnect':
+            this._disconnectHandler();
+            this._connection.disconnect();
+            break;
+    }
+}
+
+
+/**
+ * Sends a requests to the remote site asking it to provide its
+ * current interface
+ */
+JailedSite.prototype.requestRemote = function () {
+    this._connection.send({type: 'getInterface'});
+}
+
+
+/**
+ * Sets the new remote interface provided by the other site
+ *
+ * @param {Array} names list of function names
+ */
+JailedSite.prototype._setRemote = function (names) {
+    this._remote = {};
+    var i, name;
+    for (i = 0; i < names.length; i++) {
+        name = names[i];
+        this._remote[name] = this._genRemoteMethod(name);
+    }
+
+    this._remoteUpdateHandler();
+    this._reportRemoteSet();
+}
+
+
+/**
+ * Generates the wrapped function corresponding to a single remote
+ * method. When the generated function is called, it will send the
+ * corresponding message to the remote site asking it to execute
+ * the particular method of its interface
+ *
+ * @param {String} name of the remote method
+ *
+ * @returns {Function} wrapped remote method
+ */
+JailedSite.prototype._genRemoteMethod = function (name) {
+    var me = this;
+    var remoteMethod = function () {
+        var args = Array.prototype.slice.call(arguments);
+
+        //TODO: find a way to polyfill promise
+        return new Promise(function (resolve, reject) {
+            me._connection.send({
+                type: 'method',
+                name: name,
+                args: me._wrap([resolve, reject].concat(args))
+            });
+        });
+    };
+
+    return remoteMethod;
+}
+
+
+/**
+ * Sends a responce reporting that interface just provided by the
+ * remote site was sucessfully set by this site as remote
+ */
+JailedSite.prototype._reportRemoteSet = function () {
+    this._connection.send({type: 'interfaceSetAsRemote'});
+}
+
+
+/**
+ * Prepares the provided set of remote method arguments for
+ * sending to the remote site, replaces all the callbacks with
+ * identifiers
+ *
+ * @param {Array} args to wrap
+ *
+ * @returns {Array} wrapped arguments
+ */
+JailedSite.prototype._wrap = function (args) {
+    var wrapped = [];
+    var callbacks = {};
+    var callbacksPresent = false;
+    for (var i = 0; i < args.length; i++) {
+        if (typeof args[i] == 'function') {
+            callbacks[i] = args[i];
+            wrapped[i] = {type: 'callback', num: i};
+            callbacksPresent = true;
+        } else {
+            wrapped[i] = {type: 'argument', value: args[i]};
+        }
+    }
+
+    var result = {args: wrapped};
+
+    if (callbacksPresent) {
+        result.callbackId = this._store.put(callbacks);
+    }
+
+    return result;
+}
+
+
+/**
+ * Unwraps the set of arguments delivered from the remote site,
+ * replaces all callback identifiers with a function which will
+ * initiate sending that callback identifier back to other site
+ *
+ * @param {Object} args to unwrap
+ *
+ * @returns {Array} unwrapped args
+ */
+JailedSite.prototype._unwrap = function (args) {
+    var called = false;
+
+    // wraps each callback so that the only one could be called
+    var once = function (cb) {
+        return function () {
+            if (!called) {
+                called = true;
+                cb.apply(this, arguments);
+            } else {
+                var msg =
+                    'A callback from this set has already been executed';
+                throw new Error(msg);
+            }
+        };
+    }
+
+    var result = [];
+    var i, arg, cb, me = this;
+    for (i = 0; i < args.args.length; i++) {
+        arg = args.args[i];
+        if (arg.type == 'argument') {
+            result.push(arg.value);
+        } else {
+            cb = once(
+                this._genRemoteCallback(args.callbackId, i)
+            );
+            result.push(cb);
+        }
+    }
+
+    return result;
+}
+
+
+/**
+ * Generates the wrapped function corresponding to a single remote
+ * callback. When the generated function is called, it will send
+ * the corresponding message to the remote site asking it to
+ * execute the particular callback previously saved during a call
+ * by the remote site a method from the interface of this site
+ *
+ * @param {Number} id of the remote callback to execute
+ * @param {Number} argNum argument index of the callback
+ *
+ * @returns {Function} wrapped remote callback
+ */
+JailedSite.prototype._genRemoteCallback = function (id, argNum) {
+    var me = this;
+    var remoteCallback = function () {
+        me._connection.send({
+            type: 'callback',
+            id: id,
+            num: argNum,
+            args: me._wrap(arguments)
+        });
+    };
+
+    return remoteCallback;
+}
+
+
+/**
+ * Sends the notification message and breaks the connection
+ */
+JailedSite.prototype.disconnect = function () {
+    this._connection.send({type: 'disconnect'});
+    this._connection.disconnect();
+}
+
+
+/**
+ * Set a handler to be called when received a disconnect message
+ * from the remote site
+ *
+ * @param {Function} handler
+ */
+JailedSite.prototype.onDisconnect = function (handler) {
+    this._disconnectHandler = handler;
+}
+
+
+/**
+ * ReferenceStore is a special object which stores other objects
+ * and provides the references (number) instead. This reference
+ * may then be sent over a json-based communication channel (IPC
+ * to another Node.js process or a message to the Worker). Other
+ * site may then provide the reference in the responce message
+ * implying the given object should be activated.
+ *
+ * Primary usage for the ReferenceStore is a storage for the
+ * callbacks, which therefore makes it possible to initiate a
+ * callback execution by the opposite site (which normally cannot
+ * directly execute functions over the communication channel).
+ *
+ * Each stored object can only be fetched once and is not
+ * available for the second time. Each stored object must be
+ * fetched, since otherwise it will remain stored forever and
+ * consume memory.
+ *
+ * Stored object indeces are simply the numbers, which are however
+ * released along with the objects, and are later reused again (in
+ * order to postpone the overflow, which should not likely happen,
+ * but anyway).
+ */
+var ReferenceStore = function () {
+    this._store = {};    // stored object
+    this._indices = [0]; // smallest available indices
+}
+
+
+/**
+ * @function _genId() generates the new reference id
+ *
+ * @returns {Number} smallest available id and reserves it
+ */
+ReferenceStore.prototype._genId = function () {
+    var id;
+    if (this._indices.length == 1) {
+        id = this._indices[0]++;
+    } else {
+        id = this._indices.shift();
+    }
+
+    return id;
+}
+
+
+/**
+ * Releases the given reference id so that it will be available by
+ * another object stored
+ *
+ * @param {Number} id to release
+ */
+ReferenceStore.prototype._releaseId = function (id) {
+    for (var i = 0; i < this._indices.length; i++) {
+        if (id < this._indices[i]) {
+            this._indices.splice(i, 0, id);
+            break;
+        }
+    }
+
+    // cleaning-up the sequence tail
+    for (i = this._indices.length - 1; i >= 0; i--) {
+        if (this._indices[i] - 1 == this._indices[i - 1]) {
+            this._indices.pop();
+        } else {
+            break;
+        }
+    }
+}
+
+
+/**
+ * Stores the given object and returns the refernce id instead
+ *
+ * @param {Object} obj to store
+ *
+ * @returns {Number} reference id of the stored object
+ */
+ReferenceStore.prototype.put = function (obj) {
+    var id = this._genId();
+    this._store[id] = obj;
+    return id;
+}
+
+
+/**
+ * Retrieves previously stored object and releases its reference
+ *
+ * @param {Number} id of an object to retrieve
+ */
+ReferenceStore.prototype.fetch = function (id) {
+    var obj = this._store[id];
+    this._store[id] = null;
+    delete this._store[id];
+    this._releaseId(id);
+    return obj;
+}
+
+
+module.exports = JailedSite;
+},{"es6-promise":5}],2:[function(require,module,exports){
+
+/**
+ * Core plugin script loaded into the plugin process/thread.
+ * 
+ * Initializes the plugin-site API global methods.
+ */
+
+(function(){
+     
+    // localize
+    var JailedSite = require('./_JailedSite');
+    var site = new JailedSite(connection);
+    delete JailedSite;
+    delete connection;
+     
+    site.onGetInterface(function(){
+        launchConnected();
+    });
+     
+    site.onRemoteUpdate(function(){
+        application.remote = site.getRemote();
+    });
+     
+     
+
+    /**
+     * Simplified clone of Whenable instance (the object can not be
+     * placed into a shared script, because the main library needs it
+     * before the additional scripts may load)
+     */
+    var connected = false;
+    var connectedHandlers = [];
+     
+    var launchConnected = function() {
+        if (!connected) {
+            connected = true;
+
+            var handler;
+            while(handler = connectedHandlers.pop()) {
+                handler();
+            }
+        }
+    }
+     
+    var checkHandler = function(handler){
+        var type = typeof handler;
+        if (type != 'function') {
+            var msg =
+                'A function may only be subsribed to the event, '
+                + type
+                + ' was provided instead'
+            throw new Error(msg);
+        }
+
+        return handler;
+    }
+    
+     
+    /**
+     * Sets a function executed after the connection to the
+     * application is estaplished, and the initial interface-exchange
+     * messaging is completed
+     * 
+     * @param {Function} handler to be called upon initialization
+     */
+    application.whenConnected = function(handler) {
+        handler = checkHandler(handler);
+        if (connected) {
+            handler();
+        } else {
+            connectedHandlers.push(handler);
+        }
+    }
+
+
+    /**
+     * Sets the plugin interface available to the application
+     * 
+     * @param {Object} _interface to set
+     */
+    application.setInterface = function(_interface) {
+        site.setInterface(_interface);
+    }
+
+ 
+ 
+    /**
+     * Disconnects the plugin from the application (sending
+     * notification message) and destroys itself
+     */
+    application.disconnect = function(_interface) {
+        site.disconnect();
+    }
+
+})();
+
+
+},{"./_JailedSite":1}],3:[function(require,module,exports){
+
+/**
+ * Contains the routines loaded by the plugin iframe under web-browser
+ * in case when worker failed to initialize
+ * 
+ * Initializes the web environment version of the platform-dependent
+ * connection object for the plugin site
+ */
+
+
+window.application = {};
+window.connection = {};
+
+
+// event listener for the plugin message
+window.addEventListener('message', function(e) {
+    var m = e.data.data;
+    switch (m.type) {
+    case 'import':
+    case 'importJailed':  // already jailed in the iframe
+        importScript(m.url);
+        break;
+    case 'execute':
+        execute(m.code);
+        break;
+    case 'message':
+        conn._messageHandler(m.data);
+        break;
+    }
+});
+
+
+// loads and executes the javascript file with the given url
+var importScript = function(url) {
+    var success = function() {
+        parent.postMessage({
+            type : 'importSuccess',
+            url  : url
+        }, '*');
+    }
+
+    var failure = function() {
+       parent.postMessage({
+           type : 'importFailure',
+           url  : url
+       }, '*');
+    }
+
+    var error = null;
+    try {
+        window.loadScript(url, success, failure);
+    } catch (e) {
+        error = e;
+    }
+
+    if (error) {
+        throw error;
+        failure();
+    }
+}
+
+
+// evaluates the provided string
+var execute = function(code) {
+    try {
+        eval(code);
+    } catch (e) {
+        parent.postMessage({type : 'executeFailure'}, '*');
+        throw e;
+    }
+
+    parent.postMessage({type : 'executeSuccess'}, '*');
+}
+
+
+// connection object for the JailedSite constructor
+var conn = {
+    disconnect : function() {},
+    send: function(data) {
+        parent.postMessage({type: 'message', data: data}, '*');
+    },
+    onMessage: function(h){ conn._messageHandler = h },
+    _messageHandler: function(){},
+    onDisconnect: function(){}
+};
+
+window.connection = conn;
+
+parent.postMessage({
+    type : 'initialized',
+    dedicatedThread : false
+}, '*');
+
+
+},{}],4:[function(require,module,exports){
+
+/**
+ * Contains the code executed in the sandboxed frame under web-browser
+ * 
+ * Tries to create a Web-Worker inside the frame and set up the
+ * communication between the worker and the parent window. Some
+ * browsers restrict creating a worker inside a sandboxed iframe - if
+ * this happens, the plugin initialized right inside the frame (in the
+ * same thread)
+ */
+
+
+var scripts = document.getElementsByTagName('script');
+var thisScript = scripts[scripts.length-1];
+var parentNode = thisScript.parentNode;
+var __jailed__path__ = thisScript.src
+    .split('?')[0]
+    .split('/')
+    .slice(0, -1)
+    .join('/')+'/';
+
+
+/**
+ * Initializes the plugin inside a webworker. May throw an exception
+ * in case this was not permitted by the browser.
+ */
+var initWebworkerPlugin = function() {
+    // creating worker as a blob enables import of local files
+    var blobCode = [
+      ' self.addEventListener("message", function(m){   ',
+      '     if (m.data.type == "initImport") {          ',
+      '         importScripts(m.data.url);              ',
+      '         self.postMessage({                      ',
+      '             type : "initialized",               ',
+      '             dedicatedThread : true              ',
+      '         });                                     ',
+      '     }                                           ',
+      ' });                                             '
+    ].join('\n');
+
+    var blobUrl = window.URL.createObjectURL(
+        new Blob([blobCode])
+    );
+
+    var worker = new Worker(blobUrl);
+
+    // telling worker to load _pluginWebWorker.js (see blob code above)
+    worker.postMessage({
+        type: 'initImport',
+        url: __jailed__path__ + '_worker.js'
+    });
+
+
+    // mixed content warning in Chrome silently skips worker
+    // initialization without exception, handling this with timeout
+    var fallbackTimeout = setTimeout(function() {
+        console.warn('Failed to initialize web worker, falling back to iframe.')
+        worker.terminate();
+        initIframePlugin();
+    }, 1000);
+
+    // forwarding messages between the worker and parent window
+    worker.addEventListener('message', function(m) {
+        if (m.data.type == 'initialized') {
+            clearTimeout(fallbackTimeout);
+        }
+
+        parent.postMessage(m.data, '*');
+    });
+
+    window.addEventListener('message', function(m) {
+        worker.postMessage(m.data);
+    });
+}
+
+
+/**
+ * Creates plugin right in this iframe
+ */
+var initIframePlugin = function() {
+    // loads additional script into the frame
+    window.loadScript = function(path, sCb, fCb) {
+        var script = document.createElement('script');
+        script.src = path;
+
+        var clear = function() {
+            script.onload = null;
+            script.onerror = null;
+            script.onreadystatechange = null;
+            script.parentNode.removeChild(script);
+            currentErrorHandler = function(){};
+        }
+
+        var success = function() {
+            clear();
+            sCb();
+        }
+
+        var failure = function() {
+            clear();
+            fCb();
+        }
+
+        currentErrorHandler = failure;
+
+        script.onerror = failure;
+        script.onload = success;
+        script.onreadystatechange = function() {
+            var state = script.readyState;
+            if (state==='loaded' || state==='complete') {
+                success();
+            }
+        }
+
+        parentNode.appendChild(script);
+    }
+
+        
+    // handles script loading error
+    // (assuming scripts are loaded one by one in the iframe)
+    var currentErrorHandler = function(){};
+    window.addEventListener('error', function(message) {
+        currentErrorHandler();
+    });
+    require('./_pluginWebIframe');
+    require('./_pluginCore');
+}
+
+
+
+try {
+    initWebworkerPlugin();
+} catch(e) {
+    initIframePlugin();
+}
+
+
+},{"./_pluginCore":2,"./_pluginWebIframe":3}],5:[function(require,module,exports){
+(function (process,global){
+/*!
+ * @overview es6-promise - a tiny implementation of Promises/A+.
+ * @copyright Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors (Conversion to ES6 API by Jake Archibald)
+ * @license   Licensed under MIT license
+ *            See https://raw.githubusercontent.com/jakearchibald/es6-promise/master/LICENSE
+ * @version   3.0.2
+ */
+
+(function() {
+    "use strict";
+    function lib$es6$promise$utils$$objectOrFunction(x) {
+      return typeof x === 'function' || (typeof x === 'object' && x !== null);
+    }
+
+    function lib$es6$promise$utils$$isFunction(x) {
+      return typeof x === 'function';
+    }
+
+    function lib$es6$promise$utils$$isMaybeThenable(x) {
+      return typeof x === 'object' && x !== null;
+    }
+
+    var lib$es6$promise$utils$$_isArray;
+    if (!Array.isArray) {
+      lib$es6$promise$utils$$_isArray = function (x) {
+        return Object.prototype.toString.call(x) === '[object Array]';
+      };
+    } else {
+      lib$es6$promise$utils$$_isArray = Array.isArray;
+    }
+
+    var lib$es6$promise$utils$$isArray = lib$es6$promise$utils$$_isArray;
+    var lib$es6$promise$asap$$len = 0;
+    var lib$es6$promise$asap$$toString = {}.toString;
+    var lib$es6$promise$asap$$vertxNext;
+    var lib$es6$promise$asap$$customSchedulerFn;
+
+    var lib$es6$promise$asap$$asap = function asap(callback, arg) {
+      lib$es6$promise$asap$$queue[lib$es6$promise$asap$$len] = callback;
+      lib$es6$promise$asap$$queue[lib$es6$promise$asap$$len + 1] = arg;
+      lib$es6$promise$asap$$len += 2;
+      if (lib$es6$promise$asap$$len === 2) {
+        // If len is 2, that means that we need to schedule an async flush.
+        // If additional callbacks are queued before the queue is flushed, they
+        // will be processed by this flush that we are scheduling.
+        if (lib$es6$promise$asap$$customSchedulerFn) {
+          lib$es6$promise$asap$$customSchedulerFn(lib$es6$promise$asap$$flush);
+        } else {
+          lib$es6$promise$asap$$scheduleFlush();
+        }
+      }
+    }
+
+    function lib$es6$promise$asap$$setScheduler(scheduleFn) {
+      lib$es6$promise$asap$$customSchedulerFn = scheduleFn;
+    }
+
+    function lib$es6$promise$asap$$setAsap(asapFn) {
+      lib$es6$promise$asap$$asap = asapFn;
+    }
+
+    var lib$es6$promise$asap$$browserWindow = (typeof window !== 'undefined') ? window : undefined;
+    var lib$es6$promise$asap$$browserGlobal = lib$es6$promise$asap$$browserWindow || {};
+    var lib$es6$promise$asap$$BrowserMutationObserver = lib$es6$promise$asap$$browserGlobal.MutationObserver || lib$es6$promise$asap$$browserGlobal.WebKitMutationObserver;
+    var lib$es6$promise$asap$$isNode = typeof process !== 'undefined' && {}.toString.call(process) === '[object process]';
+
+    // test for web worker but not in IE10
+    var lib$es6$promise$asap$$isWorker = typeof Uint8ClampedArray !== 'undefined' &&
+      typeof importScripts !== 'undefined' &&
+      typeof MessageChannel !== 'undefined';
+
+    // node
+    function lib$es6$promise$asap$$useNextTick() {
+      // node version 0.10.x displays a deprecation warning when nextTick is used recursively
+      // see https://github.com/cujojs/when/issues/410 for details
+      return function() {
+        process.nextTick(lib$es6$promise$asap$$flush);
+      };
+    }
+
+    // vertx
+    function lib$es6$promise$asap$$useVertxTimer() {
+      return function() {
+        lib$es6$promise$asap$$vertxNext(lib$es6$promise$asap$$flush);
+      };
+    }
+
+    function lib$es6$promise$asap$$useMutationObserver() {
+      var iterations = 0;
+      var observer = new lib$es6$promise$asap$$BrowserMutationObserver(lib$es6$promise$asap$$flush);
+      var node = document.createTextNode('');
+      observer.observe(node, { characterData: true });
+
+      return function() {
+        node.data = (iterations = ++iterations % 2);
+      };
+    }
+
+    // web worker
+    function lib$es6$promise$asap$$useMessageChannel() {
+      var channel = new MessageChannel();
+      channel.port1.onmessage = lib$es6$promise$asap$$flush;
+      return function () {
+        channel.port2.postMessage(0);
+      };
+    }
+
+    function lib$es6$promise$asap$$useSetTimeout() {
+      return function() {
+        setTimeout(lib$es6$promise$asap$$flush, 1);
+      };
+    }
+
+    var lib$es6$promise$asap$$queue = new Array(1000);
+    function lib$es6$promise$asap$$flush() {
+      for (var i = 0; i < lib$es6$promise$asap$$len; i+=2) {
+        var callback = lib$es6$promise$asap$$queue[i];
+        var arg = lib$es6$promise$asap$$queue[i+1];
+
+        callback(arg);
+
+        lib$es6$promise$asap$$queue[i] = undefined;
+        lib$es6$promise$asap$$queue[i+1] = undefined;
+      }
+
+      lib$es6$promise$asap$$len = 0;
+    }
+
+    function lib$es6$promise$asap$$attemptVertx() {
+      try {
+        var r = require;
+        var vertx = r('vertx');
+        lib$es6$promise$asap$$vertxNext = vertx.runOnLoop || vertx.runOnContext;
+        return lib$es6$promise$asap$$useVertxTimer();
+      } catch(e) {
+        return lib$es6$promise$asap$$useSetTimeout();
+      }
+    }
+
+    var lib$es6$promise$asap$$scheduleFlush;
+    // Decide what async method to use to triggering processing of queued callbacks:
+    if (lib$es6$promise$asap$$isNode) {
+      lib$es6$promise$asap$$scheduleFlush = lib$es6$promise$asap$$useNextTick();
+    } else if (lib$es6$promise$asap$$BrowserMutationObserver) {
+      lib$es6$promise$asap$$scheduleFlush = lib$es6$promise$asap$$useMutationObserver();
+    } else if (lib$es6$promise$asap$$isWorker) {
+      lib$es6$promise$asap$$scheduleFlush = lib$es6$promise$asap$$useMessageChannel();
+    } else if (lib$es6$promise$asap$$browserWindow === undefined && typeof require === 'function') {
+      lib$es6$promise$asap$$scheduleFlush = lib$es6$promise$asap$$attemptVertx();
+    } else {
+      lib$es6$promise$asap$$scheduleFlush = lib$es6$promise$asap$$useSetTimeout();
+    }
+
+    function lib$es6$promise$$internal$$noop() {}
+
+    var lib$es6$promise$$internal$$PENDING   = void 0;
+    var lib$es6$promise$$internal$$FULFILLED = 1;
+    var lib$es6$promise$$internal$$REJECTED  = 2;
+
+    var lib$es6$promise$$internal$$GET_THEN_ERROR = new lib$es6$promise$$internal$$ErrorObject();
+
+    function lib$es6$promise$$internal$$selfFulfillment() {
+      return new TypeError("You cannot resolve a promise with itself");
+    }
+
+    function lib$es6$promise$$internal$$cannotReturnOwn() {
+      return new TypeError('A promises callback cannot return that same promise.');
+    }
+
+    function lib$es6$promise$$internal$$getThen(promise) {
+      try {
+        return promise.then;
+      } catch(error) {
+        lib$es6$promise$$internal$$GET_THEN_ERROR.error = error;
+        return lib$es6$promise$$internal$$GET_THEN_ERROR;
+      }
+    }
+
+    function lib$es6$promise$$internal$$tryThen(then, value, fulfillmentHandler, rejectionHandler) {
+      try {
+        then.call(value, fulfillmentHandler, rejectionHandler);
+      } catch(e) {
+        return e;
+      }
+    }
+
+    function lib$es6$promise$$internal$$handleForeignThenable(promise, thenable, then) {
+       lib$es6$promise$asap$$asap(function(promise) {
+        var sealed = false;
+        var error = lib$es6$promise$$internal$$tryThen(then, thenable, function(value) {
+          if (sealed) { return; }
+          sealed = true;
+          if (thenable !== value) {
+            lib$es6$promise$$internal$$resolve(promise, value);
+          } else {
+            lib$es6$promise$$internal$$fulfill(promise, value);
+          }
+        }, function(reason) {
+          if (sealed) { return; }
+          sealed = true;
+
+          lib$es6$promise$$internal$$reject(promise, reason);
+        }, 'Settle: ' + (promise._label || ' unknown promise'));
+
+        if (!sealed && error) {
+          sealed = true;
+          lib$es6$promise$$internal$$reject(promise, error);
+        }
+      }, promise);
+    }
+
+    function lib$es6$promise$$internal$$handleOwnThenable(promise, thenable) {
+      if (thenable._state === lib$es6$promise$$internal$$FULFILLED) {
+        lib$es6$promise$$internal$$fulfill(promise, thenable._result);
+      } else if (thenable._state === lib$es6$promise$$internal$$REJECTED) {
+        lib$es6$promise$$internal$$reject(promise, thenable._result);
+      } else {
+        lib$es6$promise$$internal$$subscribe(thenable, undefined, function(value) {
+          lib$es6$promise$$internal$$resolve(promise, value);
+        }, function(reason) {
+          lib$es6$promise$$internal$$reject(promise, reason);
+        });
+      }
+    }
+
+    function lib$es6$promise$$internal$$handleMaybeThenable(promise, maybeThenable) {
+      if (maybeThenable.constructor === promise.constructor) {
+        lib$es6$promise$$internal$$handleOwnThenable(promise, maybeThenable);
+      } else {
+        var then = lib$es6$promise$$internal$$getThen(maybeThenable);
+
+        if (then === lib$es6$promise$$internal$$GET_THEN_ERROR) {
+          lib$es6$promise$$internal$$reject(promise, lib$es6$promise$$internal$$GET_THEN_ERROR.error);
+        } else if (then === undefined) {
+          lib$es6$promise$$internal$$fulfill(promise, maybeThenable);
+        } else if (lib$es6$promise$utils$$isFunction(then)) {
+          lib$es6$promise$$internal$$handleForeignThenable(promise, maybeThenable, then);
+        } else {
+          lib$es6$promise$$internal$$fulfill(promise, maybeThenable);
+        }
+      }
+    }
+
+    function lib$es6$promise$$internal$$resolve(promise, value) {
+      if (promise === value) {
+        lib$es6$promise$$internal$$reject(promise, lib$es6$promise$$internal$$selfFulfillment());
+      } else if (lib$es6$promise$utils$$objectOrFunction(value)) {
+        lib$es6$promise$$internal$$handleMaybeThenable(promise, value);
+      } else {
+        lib$es6$promise$$internal$$fulfill(promise, value);
+      }
+    }
+
+    function lib$es6$promise$$internal$$publishRejection(promise) {
+      if (promise._onerror) {
+        promise._onerror(promise._result);
+      }
+
+      lib$es6$promise$$internal$$publish(promise);
+    }
+
+    function lib$es6$promise$$internal$$fulfill(promise, value) {
+      if (promise._state !== lib$es6$promise$$internal$$PENDING) { return; }
+
+      promise._result = value;
+      promise._state = lib$es6$promise$$internal$$FULFILLED;
+
+      if (promise._subscribers.length !== 0) {
+        lib$es6$promise$asap$$asap(lib$es6$promise$$internal$$publish, promise);
+      }
+    }
+
+    function lib$es6$promise$$internal$$reject(promise, reason) {
+      if (promise._state !== lib$es6$promise$$internal$$PENDING) { return; }
+      promise._state = lib$es6$promise$$internal$$REJECTED;
+      promise._result = reason;
+
+      lib$es6$promise$asap$$asap(lib$es6$promise$$internal$$publishRejection, promise);
+    }
+
+    function lib$es6$promise$$internal$$subscribe(parent, child, onFulfillment, onRejection) {
+      var subscribers = parent._subscribers;
+      var length = subscribers.length;
+
+      parent._onerror = null;
+
+      subscribers[length] = child;
+      subscribers[length + lib$es6$promise$$internal$$FULFILLED] = onFulfillment;
+      subscribers[length + lib$es6$promise$$internal$$REJECTED]  = onRejection;
+
+      if (length === 0 && parent._state) {
+        lib$es6$promise$asap$$asap(lib$es6$promise$$internal$$publish, parent);
+      }
+    }
+
+    function lib$es6$promise$$internal$$publish(promise) {
+      var subscribers = promise._subscribers;
+      var settled = promise._state;
+
+      if (subscribers.length === 0) { return; }
+
+      var child, callback, detail = promise._result;
+
+      for (var i = 0; i < subscribers.length; i += 3) {
+        child = subscribers[i];
+        callback = subscribers[i + settled];
+
+        if (child) {
+          lib$es6$promise$$internal$$invokeCallback(settled, child, callback, detail);
+        } else {
+          callback(detail);
+        }
+      }
+
+      promise._subscribers.length = 0;
+    }
+
+    function lib$es6$promise$$internal$$ErrorObject() {
+      this.error = null;
+    }
+
+    var lib$es6$promise$$internal$$TRY_CATCH_ERROR = new lib$es6$promise$$internal$$ErrorObject();
+
+    function lib$es6$promise$$internal$$tryCatch(callback, detail) {
+      try {
+        return callback(detail);
+      } catch(e) {
+        lib$es6$promise$$internal$$TRY_CATCH_ERROR.error = e;
+        return lib$es6$promise$$internal$$TRY_CATCH_ERROR;
+      }
+    }
+
+    function lib$es6$promise$$internal$$invokeCallback(settled, promise, callback, detail) {
+      var hasCallback = lib$es6$promise$utils$$isFunction(callback),
+          value, error, succeeded, failed;
+
+      if (hasCallback) {
+        value = lib$es6$promise$$internal$$tryCatch(callback, detail);
+
+        if (value === lib$es6$promise$$internal$$TRY_CATCH_ERROR) {
+          failed = true;
+          error = value.error;
+          value = null;
+        } else {
+          succeeded = true;
+        }
+
+        if (promise === value) {
+          lib$es6$promise$$internal$$reject(promise, lib$es6$promise$$internal$$cannotReturnOwn());
+          return;
+        }
+
+      } else {
+        value = detail;
+        succeeded = true;
+      }
+
+      if (promise._state !== lib$es6$promise$$internal$$PENDING) {
+        // noop
+      } else if (hasCallback && succeeded) {
+        lib$es6$promise$$internal$$resolve(promise, value);
+      } else if (failed) {
+        lib$es6$promise$$internal$$reject(promise, error);
+      } else if (settled === lib$es6$promise$$internal$$FULFILLED) {
+        lib$es6$promise$$internal$$fulfill(promise, value);
+      } else if (settled === lib$es6$promise$$internal$$REJECTED) {
+        lib$es6$promise$$internal$$reject(promise, value);
+      }
+    }
+
+    function lib$es6$promise$$internal$$initializePromise(promise, resolver) {
+      try {
+        resolver(function resolvePromise(value){
+          lib$es6$promise$$internal$$resolve(promise, value);
+        }, function rejectPromise(reason) {
+          lib$es6$promise$$internal$$reject(promise, reason);
+        });
+      } catch(e) {
+        lib$es6$promise$$internal$$reject(promise, e);
+      }
+    }
+
+    function lib$es6$promise$enumerator$$Enumerator(Constructor, input) {
+      var enumerator = this;
+
+      enumerator._instanceConstructor = Constructor;
+      enumerator.promise = new Constructor(lib$es6$promise$$internal$$noop);
+
+      if (enumerator._validateInput(input)) {
+        enumerator._input     = input;
+        enumerator.length     = input.length;
+        enumerator._remaining = input.length;
+
+        enumerator._init();
+
+        if (enumerator.length === 0) {
+          lib$es6$promise$$internal$$fulfill(enumerator.promise, enumerator._result);
+        } else {
+          enumerator.length = enumerator.length || 0;
+          enumerator._enumerate();
+          if (enumerator._remaining === 0) {
+            lib$es6$promise$$internal$$fulfill(enumerator.promise, enumerator._result);
+          }
+        }
+      } else {
+        lib$es6$promise$$internal$$reject(enumerator.promise, enumerator._validationError());
+      }
+    }
+
+    lib$es6$promise$enumerator$$Enumerator.prototype._validateInput = function(input) {
+      return lib$es6$promise$utils$$isArray(input);
+    };
+
+    lib$es6$promise$enumerator$$Enumerator.prototype._validationError = function() {
+      return new Error('Array Methods must be provided an Array');
+    };
+
+    lib$es6$promise$enumerator$$Enumerator.prototype._init = function() {
+      this._result = new Array(this.length);
+    };
+
+    var lib$es6$promise$enumerator$$default = lib$es6$promise$enumerator$$Enumerator;
+
+    lib$es6$promise$enumerator$$Enumerator.prototype._enumerate = function() {
+      var enumerator = this;
+
+      var length  = enumerator.length;
+      var promise = enumerator.promise;
+      var input   = enumerator._input;
+
+      for (var i = 0; promise._state === lib$es6$promise$$internal$$PENDING && i < length; i++) {
+        enumerator._eachEntry(input[i], i);
+      }
+    };
+
+    lib$es6$promise$enumerator$$Enumerator.prototype._eachEntry = function(entry, i) {
+      var enumerator = this;
+      var c = enumerator._instanceConstructor;
+
+      if (lib$es6$promise$utils$$isMaybeThenable(entry)) {
+        if (entry.constructor === c && entry._state !== lib$es6$promise$$internal$$PENDING) {
+          entry._onerror = null;
+          enumerator._settledAt(entry._state, i, entry._result);
+        } else {
+          enumerator._willSettleAt(c.resolve(entry), i);
+        }
+      } else {
+        enumerator._remaining--;
+        enumerator._result[i] = entry;
+      }
+    };
+
+    lib$es6$promise$enumerator$$Enumerator.prototype._settledAt = function(state, i, value) {
+      var enumerator = this;
+      var promise = enumerator.promise;
+
+      if (promise._state === lib$es6$promise$$internal$$PENDING) {
+        enumerator._remaining--;
+
+        if (state === lib$es6$promise$$internal$$REJECTED) {
+          lib$es6$promise$$internal$$reject(promise, value);
+        } else {
+          enumerator._result[i] = value;
+        }
+      }
+
+      if (enumerator._remaining === 0) {
+        lib$es6$promise$$internal$$fulfill(promise, enumerator._result);
+      }
+    };
+
+    lib$es6$promise$enumerator$$Enumerator.prototype._willSettleAt = function(promise, i) {
+      var enumerator = this;
+
+      lib$es6$promise$$internal$$subscribe(promise, undefined, function(value) {
+        enumerator._settledAt(lib$es6$promise$$internal$$FULFILLED, i, value);
+      }, function(reason) {
+        enumerator._settledAt(lib$es6$promise$$internal$$REJECTED, i, reason);
+      });
+    };
+    function lib$es6$promise$promise$all$$all(entries) {
+      return new lib$es6$promise$enumerator$$default(this, entries).promise;
+    }
+    var lib$es6$promise$promise$all$$default = lib$es6$promise$promise$all$$all;
+    function lib$es6$promise$promise$race$$race(entries) {
+      /*jshint validthis:true */
+      var Constructor = this;
+
+      var promise = new Constructor(lib$es6$promise$$internal$$noop);
+
+      if (!lib$es6$promise$utils$$isArray(entries)) {
+        lib$es6$promise$$internal$$reject(promise, new TypeError('You must pass an array to race.'));
+        return promise;
+      }
+
+      var length = entries.length;
+
+      function onFulfillment(value) {
+        lib$es6$promise$$internal$$resolve(promise, value);
+      }
+
+      function onRejection(reason) {
+        lib$es6$promise$$internal$$reject(promise, reason);
+      }
+
+      for (var i = 0; promise._state === lib$es6$promise$$internal$$PENDING && i < length; i++) {
+        lib$es6$promise$$internal$$subscribe(Constructor.resolve(entries[i]), undefined, onFulfillment, onRejection);
+      }
+
+      return promise;
+    }
+    var lib$es6$promise$promise$race$$default = lib$es6$promise$promise$race$$race;
+    function lib$es6$promise$promise$resolve$$resolve(object) {
+      /*jshint validthis:true */
+      var Constructor = this;
+
+      if (object && typeof object === 'object' && object.constructor === Constructor) {
+        return object;
+      }
+
+      var promise = new Constructor(lib$es6$promise$$internal$$noop);
+      lib$es6$promise$$internal$$resolve(promise, object);
+      return promise;
+    }
+    var lib$es6$promise$promise$resolve$$default = lib$es6$promise$promise$resolve$$resolve;
+    function lib$es6$promise$promise$reject$$reject(reason) {
+      /*jshint validthis:true */
+      var Constructor = this;
+      var promise = new Constructor(lib$es6$promise$$internal$$noop);
+      lib$es6$promise$$internal$$reject(promise, reason);
+      return promise;
+    }
+    var lib$es6$promise$promise$reject$$default = lib$es6$promise$promise$reject$$reject;
+
+    var lib$es6$promise$promise$$counter = 0;
+
+    function lib$es6$promise$promise$$needsResolver() {
+      throw new TypeError('You must pass a resolver function as the first argument to the promise constructor');
+    }
+
+    function lib$es6$promise$promise$$needsNew() {
+      throw new TypeError("Failed to construct 'Promise': Please use the 'new' operator, this object constructor cannot be called as a function.");
+    }
+
+    var lib$es6$promise$promise$$default = lib$es6$promise$promise$$Promise;
+    /**
+      Promise objects represent the eventual result of an asynchronous operation. The
+      primary way of interacting with a promise is through its `then` method, which
+      registers callbacks to receive either a promise's eventual value or the reason
+      why the promise cannot be fulfilled.
+
+      Terminology
+      -----------
+
+      - `promise` is an object or function with a `then` method whose behavior conforms to this specification.
+      - `thenable` is an object or function that defines a `then` method.
+      - `value` is any legal JavaScript value (including undefined, a thenable, or a promise).
+      - `exception` is a value that is thrown using the throw statement.
+      - `reason` is a value that indicates why a promise was rejected.
+      - `settled` the final resting state of a promise, fulfilled or rejected.
+
+      A promise can be in one of three states: pending, fulfilled, or rejected.
+
+      Promises that are fulfilled have a fulfillment value and are in the fulfilled
+      state.  Promises that are rejected have a rejection reason and are in the
+      rejected state.  A fulfillment value is never a thenable.
+
+      Promises can also be said to *resolve* a value.  If this value is also a
+      promise, then the original promise's settled state will match the value's
+      settled state.  So a promise that *resolves* a promise that rejects will
+      itself reject, and a promise that *resolves* a promise that fulfills will
+      itself fulfill.
+
+
+      Basic Usage:
+      ------------
+
+      ```js
+      var promise = new Promise(function(resolve, reject) {
+        // on success
+        resolve(value);
+
+        // on failure
+        reject(reason);
+      });
+
+      promise.then(function(value) {
+        // on fulfillment
+      }, function(reason) {
+        // on rejection
+      });
+      ```
+
+      Advanced Usage:
+      ---------------
+
+      Promises shine when abstracting away asynchronous interactions such as
+      `XMLHttpRequest`s.
+
+      ```js
+      function getJSON(url) {
+        return new Promise(function(resolve, reject){
+          var xhr = new XMLHttpRequest();
+
+          xhr.open('GET', url);
+          xhr.onreadystatechange = handler;
+          xhr.responseType = 'json';
+          xhr.setRequestHeader('Accept', 'application/json');
+          xhr.send();
+
+          function handler() {
+            if (this.readyState === this.DONE) {
+              if (this.status === 200) {
+                resolve(this.response);
+              } else {
+                reject(new Error('getJSON: `' + url + '` failed with status: [' + this.status + ']'));
+              }
+            }
+          };
+        });
+      }
+
+      getJSON('/posts.json').then(function(json) {
+        // on fulfillment
+      }, function(reason) {
+        // on rejection
+      });
+      ```
+
+      Unlike callbacks, promises are great composable primitives.
+
+      ```js
+      Promise.all([
+        getJSON('/posts'),
+        getJSON('/comments')
+      ]).then(function(values){
+        values[0] // => postsJSON
+        values[1] // => commentsJSON
+
+        return values;
+      });
+      ```
+
+      @class Promise
+      @param {function} resolver
+      Useful for tooling.
+      @constructor
+    */
+    function lib$es6$promise$promise$$Promise(resolver) {
+      this._id = lib$es6$promise$promise$$counter++;
+      this._state = undefined;
+      this._result = undefined;
+      this._subscribers = [];
+
+      if (lib$es6$promise$$internal$$noop !== resolver) {
+        if (!lib$es6$promise$utils$$isFunction(resolver)) {
+          lib$es6$promise$promise$$needsResolver();
+        }
+
+        if (!(this instanceof lib$es6$promise$promise$$Promise)) {
+          lib$es6$promise$promise$$needsNew();
+        }
+
+        lib$es6$promise$$internal$$initializePromise(this, resolver);
+      }
+    }
+
+    lib$es6$promise$promise$$Promise.all = lib$es6$promise$promise$all$$default;
+    lib$es6$promise$promise$$Promise.race = lib$es6$promise$promise$race$$default;
+    lib$es6$promise$promise$$Promise.resolve = lib$es6$promise$promise$resolve$$default;
+    lib$es6$promise$promise$$Promise.reject = lib$es6$promise$promise$reject$$default;
+    lib$es6$promise$promise$$Promise._setScheduler = lib$es6$promise$asap$$setScheduler;
+    lib$es6$promise$promise$$Promise._setAsap = lib$es6$promise$asap$$setAsap;
+    lib$es6$promise$promise$$Promise._asap = lib$es6$promise$asap$$asap;
+
+    lib$es6$promise$promise$$Promise.prototype = {
+      constructor: lib$es6$promise$promise$$Promise,
+
+    /**
+      The primary way of interacting with a promise is through its `then` method,
+      which registers callbacks to receive either a promise's eventual value or the
+      reason why the promise cannot be fulfilled.
+
+      ```js
+      findUser().then(function(user){
+        // user is available
+      }, function(reason){
+        // user is unavailable, and you are given the reason why
+      });
+      ```
+
+      Chaining
+      --------
+
+      The return value of `then` is itself a promise.  This second, 'downstream'
+      promise is resolved with the return value of the first promise's fulfillment
+      or rejection handler, or rejected if the handler throws an exception.
+
+      ```js
+      findUser().then(function (user) {
+        return user.name;
+      }, function (reason) {
+        return 'default name';
+      }).then(function (userName) {
+        // If `findUser` fulfilled, `userName` will be the user's name, otherwise it
+        // will be `'default name'`
+      });
+
+      findUser().then(function (user) {
+        throw new Error('Found user, but still unhappy');
+      }, function (reason) {
+        throw new Error('`findUser` rejected and we're unhappy');
+      }).then(function (value) {
+        // never reached
+      }, function (reason) {
+        // if `findUser` fulfilled, `reason` will be 'Found user, but still unhappy'.
+        // If `findUser` rejected, `reason` will be '`findUser` rejected and we're unhappy'.
+      });
+      ```
+      If the downstream promise does not specify a rejection handler, rejection reasons will be propagated further downstream.
+
+      ```js
+      findUser().then(function (user) {
+        throw new PedagogicalException('Upstream error');
+      }).then(function (value) {
+        // never reached
+      }).then(function (value) {
+        // never reached
+      }, function (reason) {
+        // The `PedgagocialException` is propagated all the way down to here
+      });
+      ```
+
+      Assimilation
+      ------------
+
+      Sometimes the value you want to propagate to a downstream promise can only be
+      retrieved asynchronously. This can be achieved by returning a promise in the
+      fulfillment or rejection handler. The downstream promise will then be pending
+      until the returned promise is settled. This is called *assimilation*.
+
+      ```js
+      findUser().then(function (user) {
+        return findCommentsByAuthor(user);
+      }).then(function (comments) {
+        // The user's comments are now available
+      });
+      ```
+
+      If the assimliated promise rejects, then the downstream promise will also reject.
+
+      ```js
+      findUser().then(function (user) {
+        return findCommentsByAuthor(user);
+      }).then(function (comments) {
+        // If `findCommentsByAuthor` fulfills, we'll have the value here
+      }, function (reason) {
+        // If `findCommentsByAuthor` rejects, we'll have the reason here
+      });
+      ```
+
+      Simple Example
+      --------------
+
+      Synchronous Example
+
+      ```javascript
+      var result;
+
+      try {
+        result = findResult();
+        // success
+      } catch(reason) {
+        // failure
+      }
+      ```
+
+      Errback Example
+
+      ```js
+      findResult(function(result, err){
+        if (err) {
+          // failure
+        } else {
+          // success
+        }
+      });
+      ```
+
+      Promise Example;
+
+      ```javascript
+      findResult().then(function(result){
+        // success
+      }, function(reason){
+        // failure
+      });
+      ```
+
+      Advanced Example
+      --------------
+
+      Synchronous Example
+
+      ```javascript
+      var author, books;
+
+      try {
+        author = findAuthor();
+        books  = findBooksByAuthor(author);
+        // success
+      } catch(reason) {
+        // failure
+      }
+      ```
+
+      Errback Example
+
+      ```js
+
+      function foundBooks(books) {
+
+      }
+
+      function failure(reason) {
+
+      }
+
+      findAuthor(function(author, err){
+        if (err) {
+          failure(err);
+          // failure
+        } else {
+          try {
+            findBoooksByAuthor(author, function(books, err) {
+              if (err) {
+                failure(err);
+              } else {
+                try {
+                  foundBooks(books);
+                } catch(reason) {
+                  failure(reason);
+                }
+              }
+            });
+          } catch(error) {
+            failure(err);
+          }
+          // success
+        }
+      });
+      ```
+
+      Promise Example;
+
+      ```javascript
+      findAuthor().
+        then(findBooksByAuthor).
+        then(function(books){
+          // found books
+      }).catch(function(reason){
+        // something went wrong
+      });
+      ```
+
+      @method then
+      @param {Function} onFulfilled
+      @param {Function} onRejected
+      Useful for tooling.
+      @return {Promise}
+    */
+      then: function(onFulfillment, onRejection) {
+        var parent = this;
+        var state = parent._state;
+
+        if (state === lib$es6$promise$$internal$$FULFILLED && !onFulfillment || state === lib$es6$promise$$internal$$REJECTED && !onRejection) {
+          return this;
+        }
+
+        var child = new this.constructor(lib$es6$promise$$internal$$noop);
+        var result = parent._result;
+
+        if (state) {
+          var callback = arguments[state - 1];
+          lib$es6$promise$asap$$asap(function(){
+            lib$es6$promise$$internal$$invokeCallback(state, child, callback, result);
+          });
+        } else {
+          lib$es6$promise$$internal$$subscribe(parent, child, onFulfillment, onRejection);
+        }
+
+        return child;
+      },
+
+    /**
+      `catch` is simply sugar for `then(undefined, onRejection)` which makes it the same
+      as the catch block of a try/catch statement.
+
+      ```js
+      function findAuthor(){
+        throw new Error('couldn't find that author');
+      }
+
+      // synchronous
+      try {
+        findAuthor();
+      } catch(reason) {
+        // something went wrong
+      }
+
+      // async with promises
+      findAuthor().catch(function(reason){
+        // something went wrong
+      });
+      ```
+
+      @method catch
+      @param {Function} onRejection
+      Useful for tooling.
+      @return {Promise}
+    */
+      'catch': function(onRejection) {
+        return this.then(null, onRejection);
+      }
+    };
+    function lib$es6$promise$polyfill$$polyfill() {
+      var local;
+
+      if (typeof global !== 'undefined') {
+          local = global;
+      } else if (typeof self !== 'undefined') {
+          local = self;
+      } else {
+          try {
+              local = Function('return this')();
+          } catch (e) {
+              throw new Error('polyfill failed because global object is unavailable in this environment');
+          }
+      }
+
+      var P = local.Promise;
+
+      if (P && Object.prototype.toString.call(P.resolve()) === '[object Promise]' && !P.cast) {
+        return;
+      }
+
+      local.Promise = lib$es6$promise$promise$$default;
+    }
+    var lib$es6$promise$polyfill$$default = lib$es6$promise$polyfill$$polyfill;
+
+    var lib$es6$promise$umd$$ES6Promise = {
+      'Promise': lib$es6$promise$promise$$default,
+      'polyfill': lib$es6$promise$polyfill$$default
+    };
+
+    /* global define:true module:true window: true */
+    if (typeof define === 'function' && define['amd']) {
+      define(function() { return lib$es6$promise$umd$$ES6Promise; });
+    } else if (typeof module !== 'undefined' && module['exports']) {
+      module['exports'] = lib$es6$promise$umd$$ES6Promise;
+    } else if (typeof this !== 'undefined') {
+      this['ES6Promise'] = lib$es6$promise$umd$$ES6Promise;
+    }
+
+    lib$es6$promise$polyfill$$default();
+}).call(this);
+
+
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"1YiZ5S":6}],6:[function(require,module,exports){
+// shim for using process in browser
+
+var process = module.exports = {};
+
+process.nextTick = (function () {
+    var canSetImmediate = typeof window !== 'undefined'
+    && window.setImmediate;
+    var canPost = typeof window !== 'undefined'
+    && window.postMessage && window.addEventListener
+    ;
+
+    if (canSetImmediate) {
+        return function (f) { return window.setImmediate(f) };
+    }
+
+    if (canPost) {
+        var queue = [];
+        window.addEventListener('message', function (ev) {
+            var source = ev.source;
+            if ((source === window || source === null) && ev.data === 'process-tick') {
+                ev.stopPropagation();
+                if (queue.length > 0) {
+                    var fn = queue.shift();
+                    fn();
+                }
+            }
+        }, true);
+
+        return function nextTick(fn) {
+            queue.push(fn);
+            window.postMessage('process-tick', '*');
+        };
+    }
+
+    return function nextTick(fn) {
+        setTimeout(fn, 0);
+    };
+})();
+
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+}
+
+// TODO(shtylman)
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+
+},{}]},{},[4])
