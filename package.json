@@ -29,7 +29,7 @@
     "build": "gulp"
   },
   "dependencies": {
-    "es6-promise": "3.0.2"
+    "es6-promise-polyfill": "1.1.1"
   },
   "devDependencies": {
     "del": "2.1.0",
