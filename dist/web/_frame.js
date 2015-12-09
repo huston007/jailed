@@ -111,7 +111,6 @@ JailedSite.prototype.setInterface = function (_interface) {
         this._interface = _interface;
     } else {
         this._interface = this.getClassInstanceInterface(_interface);
-        console.log('interface!', this._interface)
     }
     this._sendInterface();
 };
