@@ -72,26 +72,9 @@
 	 * in case this was not permitted by the browser.
 	 */
 	var initWebworkerPlugin = function() {
-	    // creating worker as a blob enables import of local files
-	    var blobCode = [
-	        __webpack_require__(2),
-	        __webpack_require__(3),
-	      ' self.addEventListener("message", function(m){   ',
-	      '     if (m.data.type == "initImport") {          ',
-	      '         importScripts(m.data.url);              ',
-	      '         self.postMessage({                      ',
-	      '             type : "initialized",               ',
-	      '             dedicatedThread : true              ',
-	      '         });                                     ',
-	      '     }                                           ',
-	      ' });                                             '
-	    ].join('\n');
+	    var WorkerScript = __webpack_require__(2);
 
-	    var blobUrl = window.URL.createObjectURL(
-	        new Blob([blobCode])
-	    );
-
-	    var worker = new Worker(blobUrl);
+	    var worker = new WorkerScript(blobUrl);
 
 	    // telling worker to load _pluginWebWorker.js (see blob code above)
 	    worker.postMessage({
@@ -171,8 +154,8 @@
 	    window.addEventListener('error', function(message) {
 	        currentErrorHandler();
 	    });
-	    __webpack_require__(8);
 	    __webpack_require__(3);
+	    __webpack_require__(4);
 	}
 
 
@@ -193,115 +176,113 @@
 
 /***/ },
 /* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = function() {
+		return new Worker(__webpack_require__.p + "cdcce29b1400df392e9e.worker.js");
+	};
+
+/***/ },
+/* 3 */
 /***/ function(module, exports) {
 
 	
 	/**
-	 * Contains the routines loaded by the plugin Worker under web-browser.
+	 * Contains the routines loaded by the plugin iframe under web-browser
+	 * in case when worker failed to initialize
 	 * 
 	 * Initializes the web environment version of the platform-dependent
 	 * connection object for the plugin site
 	 */
 
-	self.application = {};
-	self.connection = {};
+
+	window.application = {};
+	window.connection = {};
 
 
-	(function(){
-	     
-	    /**
-	     * Event lisener for the plugin message
-	     */
-	    self.addEventListener('message', function(e){
-	        var m = e.data.data;
-	        switch (m.type) {
-	        case 'import':
-	        case 'importJailed':  // already jailed in the iframe
-	            importScript(m.url);
-	            break;
-	        case 'execute':
-	            execute(m.code);
-	            break;
-	        case 'message':
-	            conn._messageHandler(m.data);
-	            break;
-	        }
-	     });
+	// event listener for the plugin message
+	window.addEventListener('message', function(e) {
+	    var m = e.data.data;
+	    switch (m.type) {
+	    case 'import':
+	    case 'importJailed':  // already jailed in the iframe
+	        importScript(m.url);
+	        break;
+	    case 'execute':
+	        execute(m.code);
+	        break;
+	    case 'message':
+	        conn._messageHandler(m.data);
+	        break;
+	    }
+	});
 
 
-	    /**
-	     * Loads and executes the JavaScript file with the given url
-	     *
-	     * @param {String} url to load
-	     */
-	    var importScript = function(url) {
-	        var error = null;
-
-	        // importScripts does not throw an exception in old webkits
-	        // (Opera 15.0), but we can determine a failure by the
-	        // returned value which must be undefined in case of success
-	        var returned = true;
-	        try {
-	            returned = importScripts(url);
-	        } catch (e) {
-	            error = e;
-	        }
-
-	        if (error || typeof returned != 'undefined') {
-	            self.postMessage({type: 'importFailure', url: url});
-	            if (error) {
-	                throw error;
-	            }
-	        } else {
-	           self.postMessage({type: 'importSuccess', url: url});
-	        }
-
+	// loads and executes the javascript file with the given url
+	var importScript = function(url) {
+	    var success = function() {
+	        parent.postMessage({
+	            type : 'importSuccess',
+	            url  : url
+	        }, '*');
 	    }
 
-
-	    /**
-	     * Executes the given code in a jailed environment. For web
-	     * implementation, we're already jailed in the iframe and the
-	     * worker, so simply eval()
-	     * 
-	     * @param {String} code code to execute
-	     */
-	    var execute = function(code) {
-	        try {
-	            eval(code);
-	        } catch (e) {
-	            self.postMessage({type: 'executeFailure'});
-	            throw e;
-	        }
-
-	        self.postMessage({type: 'executeSuccess'});
+	    var failure = function() {
+	       parent.postMessage({
+	           type : 'importFailure',
+	           url  : url
+	       }, '*');
 	    }
 
-	     
-	    /**
-	     * Connection object provided to the JailedSite constructor,
-	     * plugin site implementation for the web-based environment.
-	     * Global will be then cleared to prevent exposure into the
-	     * Worker, so we put this local connection object into a closure
-	     */
-	    var conn = {
-	        disconnect: function(){ self.close(); },
-	        send: function(data) {
-	            self.postMessage({type: 'message', data: data});
-	        },
-	        onMessage: function(h){ conn._messageHandler = h; },
-	        _messageHandler: function(){},
-	        onDisconnect: function() {}
-	    };
-	     
-	    connection = conn;
-	     
-	})();
+	    var error = null;
+	    try {
+	        window.loadScript(url, success, failure);
+	    } catch (e) {
+	        error = e;
+	    }
+
+	    if (error) {
+	        throw error;
+	        failure();
+	    }
+	}
+
+
+	// evaluates the provided string
+	var execute = function(code) {
+	    try {
+	        eval(code);
+	    } catch (e) {
+	        parent.postMessage({type : 'executeFailure'}, '*');
+	        throw e;
+	    }
+
+	    parent.postMessage({type : 'executeSuccess'}, '*');
+	}
+
+
+	// connection object for the JailedSite constructor
+	var conn = {
+	    disconnect : function() {},
+	    send: function(data) {
+	        parent.postMessage({type: 'message', data: data}, '*');
+	    },
+	    onMessage: function(h){ conn._messageHandler = h },
+	    _messageHandler: function(){},
+	    onDisconnect: function(){}
+	};
+
+	window.connection = conn;
+
+	parent.postMessage({
+	    type : 'initialized',
+	    dedicatedThread : false
+	}, '*');
 
 
 
 /***/ },
-/* 3 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	
@@ -314,7 +295,7 @@
 	(function(){
 	     
 	    // localize
-	    var JailedSite = __webpack_require__(4);
+	    var JailedSite = __webpack_require__(5);
 	    var site = new JailedSite(connection);
 	    delete JailedSite;
 	    delete connection;
@@ -403,10 +384,10 @@
 
 
 /***/ },
-/* 4 */
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Promise = __webpack_require__(5).Promise;
+	var Promise = __webpack_require__(6).Promise;
 
 	/**
 	 * Contains the JailedSite object used both by the application
@@ -891,7 +872,7 @@
 	module.exports = JailedSite;
 
 /***/ },
-/* 5 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(global, setImmediate) {(function(global){
@@ -1231,13 +1212,13 @@
 
 	})(typeof window != 'undefined' ? window : typeof global != 'undefined' ? global : typeof self != 'undefined' ? self : this);
 
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(6).setImmediate))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(7).setImmediate))
 
 /***/ },
-/* 6 */
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(setImmediate, clearImmediate) {var nextTick = __webpack_require__(7).nextTick;
+	/* WEBPACK VAR INJECTION */(function(setImmediate, clearImmediate) {var nextTick = __webpack_require__(8).nextTick;
 	var apply = Function.prototype.apply;
 	var slice = Array.prototype.slice;
 	var immediateIds = {};
@@ -1313,10 +1294,10 @@
 	exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
 	  delete immediateIds[id];
 	};
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(6).setImmediate, __webpack_require__(6).clearImmediate))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(7).setImmediate, __webpack_require__(7).clearImmediate))
 
 /***/ },
-/* 7 */
+/* 8 */
 /***/ function(module, exports) {
 
 	// shim for using process in browser
@@ -1410,105 +1391,6 @@
 	    throw new Error('process.chdir is not supported');
 	};
 	process.umask = function() { return 0; };
-
-
-/***/ },
-/* 8 */
-/***/ function(module, exports) {
-
-	
-	/**
-	 * Contains the routines loaded by the plugin iframe under web-browser
-	 * in case when worker failed to initialize
-	 * 
-	 * Initializes the web environment version of the platform-dependent
-	 * connection object for the plugin site
-	 */
-
-
-	window.application = {};
-	window.connection = {};
-
-
-	// event listener for the plugin message
-	window.addEventListener('message', function(e) {
-	    var m = e.data.data;
-	    switch (m.type) {
-	    case 'import':
-	    case 'importJailed':  // already jailed in the iframe
-	        importScript(m.url);
-	        break;
-	    case 'execute':
-	        execute(m.code);
-	        break;
-	    case 'message':
-	        conn._messageHandler(m.data);
-	        break;
-	    }
-	});
-
-
-	// loads and executes the javascript file with the given url
-	var importScript = function(url) {
-	    var success = function() {
-	        parent.postMessage({
-	            type : 'importSuccess',
-	            url  : url
-	        }, '*');
-	    }
-
-	    var failure = function() {
-	       parent.postMessage({
-	           type : 'importFailure',
-	           url  : url
-	       }, '*');
-	    }
-
-	    var error = null;
-	    try {
-	        window.loadScript(url, success, failure);
-	    } catch (e) {
-	        error = e;
-	    }
-
-	    if (error) {
-	        throw error;
-	        failure();
-	    }
-	}
-
-
-	// evaluates the provided string
-	var execute = function(code) {
-	    try {
-	        eval(code);
-	    } catch (e) {
-	        parent.postMessage({type : 'executeFailure'}, '*');
-	        throw e;
-	    }
-
-	    parent.postMessage({type : 'executeSuccess'}, '*');
-	}
-
-
-	// connection object for the JailedSite constructor
-	var conn = {
-	    disconnect : function() {},
-	    send: function(data) {
-	        parent.postMessage({type: 'message', data: data}, '*');
-	    },
-	    onMessage: function(h){ conn._messageHandler = h },
-	    _messageHandler: function(){},
-	    onDisconnect: function(){}
-	};
-
-	window.connection = conn;
-
-	parent.postMessage({
-	    type : 'initialized',
-	    dedicatedThread : false
-	}, '*');
-
 
 
 /***/ }
