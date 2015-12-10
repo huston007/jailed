@@ -176,7 +176,7 @@
 	     * _JailedSite.js)
 	     */
 	    var initNode = function() {
-	        __webpack_require__(5);
+	        __webpack_require__(6);
 	    }
 
 
@@ -694,7 +694,7 @@
 	     */
 	    DynamicPlugin.prototype._init =
 	           Plugin.prototype._init = function() {
-	        var JailedSite = __webpack_require__(5);
+	        var JailedSite = __webpack_require__(6);
 	        this._site = new JailedSite(this._connection);
 	               
 	        var me = this;
@@ -840,10 +840,11 @@
 /* 2 */,
 /* 3 */,
 /* 4 */,
-/* 5 */
+/* 5 */,
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Promise = __webpack_require__(6).Promise;
+	var Promise = __webpack_require__(7).Promise;
 
 	/**
 	 * Contains the JailedSite object used both by the application
@@ -1328,7 +1329,7 @@
 	module.exports = JailedSite;
 
 /***/ },
-/* 6 */
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(global, setImmediate) {(function(global){
@@ -1668,13 +1669,13 @@
 
 	})(typeof window != 'undefined' ? window : typeof global != 'undefined' ? global : typeof self != 'undefined' ? self : this);
 
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(7).setImmediate))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(8).setImmediate))
 
 /***/ },
-/* 7 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(setImmediate, clearImmediate) {var nextTick = __webpack_require__(8).nextTick;
+	/* WEBPACK VAR INJECTION */(function(setImmediate, clearImmediate) {var nextTick = __webpack_require__(9).nextTick;
 	var apply = Function.prototype.apply;
 	var slice = Array.prototype.slice;
 	var immediateIds = {};
@@ -1750,10 +1751,10 @@
 	exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
 	  delete immediateIds[id];
 	};
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(7).setImmediate, __webpack_require__(7).clearImmediate))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(8).setImmediate, __webpack_require__(8).clearImmediate))
 
 /***/ },
-/* 8 */
+/* 9 */
 /***/ function(module, exports) {
 
 	// shim for using process in browser
